@@ -1,0 +1,14 @@
+{
+  "name": "hello-app",
+  "version": "1.0.0",
+  "description": "Node.js ARI app for Asterisk",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "ari-client": "^1.0.0",
+    "dotenv": "^16.4.0"
+  }
+}
