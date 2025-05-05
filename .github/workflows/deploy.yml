@@ -26,7 +26,7 @@ jobs:
           HOST: ${{ secrets.EC2_HOST }}
           USER: ${{ secrets.EC2_USER }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem $USER@$HOST <<'EOF'
+          ssh -o StrictHostKeyChecking=no -i key.pem $USER@$HOST <<EOF
             if [ ! -d AI-System ]; then
               git clone https://github.com/kr4ge/AI-System.git
             fi
@@ -34,4 +34,4 @@ jobs:
             git pull
             docker compose down || true
             docker compose up --build -d
-EOF
+          EOF
