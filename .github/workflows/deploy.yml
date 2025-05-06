@@ -28,7 +28,7 @@ jobs:
           DOCKER_HUB_USER: ${{ secrets.DOCKER_HUB_USER }}
           DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem $USER@$HOST <<'EOF'
+          ssh -o StrictHostKeyChecking=no -i key.pem $USER@$HOST <<EOF
             export COMPOSE_HTTP_TIMEOUT=300
 
             if [ ! -d AI-System ]; then
