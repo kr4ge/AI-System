@@ -36,8 +36,8 @@ jobs:
     - name: 🐳 Build and push Node.js Docker image
       uses: docker/build-push-action@v3
       with:
-        context: ./node
-        file: ./node/Dockerfile
+        context: ./node-app
+        file: ./node-app/Dockerfile
         push: true
         tags: ${{ env.DOCKERHUB_REPO }}-node:latest
 
