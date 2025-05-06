@@ -73,4 +73,4 @@ jobs:
           docker pull ${{ env.DOCKERHUB_REPO }}-asterisk:latest
           docker pull ${{ env.DOCKERHUB_REPO }}-node:latest
           docker-compose down || true
-          docker-compose up -d --remove-orphans
+          COMPOSE_HTTP_TIMEOUT=300 docker-compose up -d --remove-orphans
