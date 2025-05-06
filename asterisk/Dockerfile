@@ -45,6 +45,11 @@ RUN contrib/scripts/get_mp3_source.sh && \
 # Set working directory to Asterisk config dir
 WORKDIR /etc/asterisk
 
+COPY ./configs/extensions.conf /etc/asterisk/extensions.conf
+COPY ./configs/pjsip.conf /etc/asterisk/pjsip.conf
+COPY ./configs/ari.conf /etc/asterisk/ari.conf
+COPY ./configs/http.conf /etc/asterisk/http.conf
+
 # Switch to non-root user
 USER asterisk
 
