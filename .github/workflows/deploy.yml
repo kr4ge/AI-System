@@ -1,4 +1,4 @@
-name: Deploy Node-App to EC2 Only
+name: Deploy AI-System to EC2
 
 on:
   push:
@@ -9,7 +9,7 @@ env:
   DOCKERHUB_REPO: kr4ge/ai-system
 
 jobs:
-  deploy-node:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,6 +25,14 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+    # - name: 🐳 Build and push asterisk Docker images
+    #   uses: docker/build-push-action@v3
+    #   with:
+    #     context: ./asterisk
+    #     file: ./asterisk/Dockerfile
+    #     push: true
+    #     tags: ${{ env.DOCKERHUB_REPO }}-asterisk:latest
+
     - name: 🐳 Build and push Node.js Docker image
       uses: docker/build-push-action@v3
       with:
@@ -33,7 +41,32 @@ jobs:
         push: true
         tags: ${{ env.DOCKERHUB_REPO }}-node:latest
 
-    - name: 🚀 Pull Node.js image on EC2 and restart container
+    - name: 📦 Copy docker-compose.yml to EC2
+      uses: appleboy/scp-action@v0.1.5
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        port: 22
+        source: "docker-compose.yml"
+        target: "~/ai-system/"
+
+    - name: 🔐 Create .env on EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          mkdir -p ~/ai-system
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > ~/ai-system/.env
+          echo "DEEPGRAM_API_KEY=${{ secrets.DEEPGRAM_API_KEY }}" >> ~/ai-system/.env
+          echo "ARI_URL=http://asterisk:8088" >> ~/ai-system/.env
+          echo "ARI_USER=asterisk" >> ~/ai-system/.env
+          echo "ARI_PASS=asterisk" >> ~/ai-system/.env
+          echo "APP_NAME=hello-app" >> ~/ai-system/.env
+
+    - name: 🚀 Deploy to EC2
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.EC2_HOST }}
@@ -42,4 +75,5 @@ jobs:
         script: |
           cd ~/ai-system
           docker pull ${{ env.DOCKERHUB_REPO }}-node:latest
-          docker-compose up -d --no-deps --build node
+          docker-compose down
+          docker-compose up -d --remove-orphans
