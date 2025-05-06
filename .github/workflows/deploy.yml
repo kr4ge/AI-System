@@ -1,46 +1,76 @@
-name: CI/CD
+name: Build and Deploy AI System (ARI)
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
+env:
+  DOCKERHUB_REPO: kr4ge/ai-system
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+    - name: 🧾 Checkout code
+      uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+    - name: 🛠 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
 
-      - name: Copy SSH Key
-        env:
-          KEY: ${{ secrets.EC2_SSH_KEY }}
-        run: |
-          echo "$KEY" > key.pem
-          chmod 600 key.pem
+    - name: 🔐 Login to DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Deploy to EC2 via SSH
-        env:
-          HOST: ${{ secrets.EC2_HOST }}
-          USER: ${{ secrets.EC2_USER }}
-          DOCKER_HUB_USER: ${{ secrets.DOCKER_HUB_USER }}
-          DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
-        run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem $USER@$HOST <<EOF
-            export COMPOSE_HTTP_TIMEOUT=300
+    - name: 🐳 Build & Push Asterisk image
+      uses: docker/build-push-action@v3
+      with:
+        context: ./asterisk
+        file: ./asterisk/Dockerfile
+        push: true
+        tags: ${{ env.DOCKERHUB_REPO }}-asterisk:latest
 
-            if [ ! -d AI-System ]; then
-              git clone https://github.com/kr4ge/AI-System.git
-            fi
+    - name: 🐳 Build & Push Node App image
+      uses: docker/build-push-action@v3
+      with:
+        context: ./node-app
+        file: ./node-app/Dockerfile
+        push: true
+        tags: ${{ env.DOCKERHUB_REPO }}-node:latest
 
-            cd AI-System
-            git pull
+    - name: 📦 Copy docker-compose.yml to EC2
+      uses: appleboy/scp-action@v0.1.5
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        port: 22
+        source: "docker-compose.yml"
+        target: "~/ai-system/"
 
-            echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USER" --password-stdin
+    - name: 🔐 Create .env on EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          mkdir -p ~/ai-system
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > ~/ai-system/.env
+          echo "DEEPGRAM_API_KEY=${{ secrets.DEEPGRAM_API_KEY }}" >> ~/ai-system/.env
 
-            docker-compose down || true
-            docker-compose pull
-            docker-compose up -d
-          EOF
+    - name: 🚀 Deploy to EC2 with Docker Compose
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          cd ~/ai-system
+          docker pull ${{ env.DOCKERHUB_REPO }}-asterisk:latest
+          docker pull ${{ env.DOCKERHUB_REPO }}-node:latest
+          docker-compose down || true
+          docker-compose up -d --remove-orphans
