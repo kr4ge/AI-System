@@ -7,7 +7,7 @@ services:
     ports:
       - "5038:5038"
       - "5060:5060/udp"
-      - "10000-20000:10000-20000/udp"
+      - "10000-10100:10000-10100/udp"
       - "8088:8088"
     networks:
       - ainw
@@ -23,6 +23,10 @@ services:
     container_name: node-app
     ports:
       - "3001:3001"
+    env_file:
+      - .env
+    depends_on:
+      - asterisk
     networks:
       - ainw
     restart: unless-stopped
