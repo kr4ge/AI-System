@@ -25,13 +25,22 @@ jobs:
         env:
           HOST: ${{ secrets.EC2_HOST }}
           USER: ${{ secrets.EC2_USER }}
+          DOCKER_HUB_USER: ${{ secrets.DOCKER_HUB_USER }}
+          DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem $USER@$HOST <<EOF
+          ssh -o StrictHostKeyChecking=no -i key.pem $USER@$HOST <<'EOF'
+            export COMPOSE_HTTP_TIMEOUT=300
+
             if [ ! -d AI-System ]; then
               git clone https://github.com/kr4ge/AI-System.git
             fi
+
             cd AI-System
             git pull
+
+            echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USER" --password-stdin
+
             docker-compose down || true
-            docker-compose up --build -d
+            docker-compose pull
+            docker-compose up -d
           EOF

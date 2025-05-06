@@ -4,26 +4,52 @@ ENV ASTERISK_VERSION=22.3.0
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install -y \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
     curl wget gnupg2 ca-certificates build-essential \
     libedit-dev libjansson-dev libxml2-dev uuid-dev \
     libssl-dev libncurses5-dev pkg-config subversion \
-    python3 sudo libsqlite3-dev
+    python3 sudo libsqlite3-dev && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Download and build Asterisk
+# Create asterisk user
+RUN useradd -m asterisk
+
+# Download and extract Asterisk source
+WORKDIR /usr/src
 RUN wget https://downloads.asterisk.org/pub/telephony/asterisk/asterisk-${ASTERISK_VERSION}.tar.gz && \
-    tar -xvzf asterisk-${ASTERISK_VERSION}.tar.gz && \
-    cd asterisk-${ASTERISK_VERSION} && \
-    contrib/scripts/get_mp3_source.sh && \
-    ./configure && \
-    make menuselect.makeopts && \
-    # 🔥 Force-enable ARI modules here:
-    menuselect/menuselect --enable res_http_websocket --enable res_ari --enable res_ari_applications --enable res_ari_asterisk --enable res_ari_bridges --enable res_ari_channels --enable res_ari_device_states --enable res_ari_endpoints --enable res_ari_events --enable res_ari_model --enable res_ari_playbacks --enable res_ari_recordings --enable res_ari_sounds menuselect.makeopts && \
-    menuselect/menuselect --enable CORE-SOUNDS-EN-ULAW menuselect.makeopts && \
-    make -j4 && make install && make samples && make config
+    tar -xzf asterisk-${ASTERISK_VERSION}.tar.gz && \
+    rm asterisk-${ASTERISK_VERSION}.tar.gz
 
-# Expose ports
+# Build Asterisk with ARI and sounds
+WORKDIR /usr/src/asterisk-${ASTERISK_VERSION}
+RUN contrib/scripts/get_mp3_source.sh && \
+    ./configure && \
+    make menuselect && \
+    menuselect/menuselect --enable res_http_websocket \
+                          --enable res_ari \
+                          --enable res_ari_applications \
+                          --enable res_ari_asterisk \
+                          --enable res_ari_bridges \
+                          --enable res_ari_channels \
+                          --enable res_ari_device_states \
+                          --enable res_ari_endpoints \
+                          --enable res_ari_events \
+                          --enable res_ari_model \
+                          --enable res_ari_playbacks \
+                          --enable res_ari_recordings \
+                          --enable res_ari_sounds \
+                          --enable CORE-SOUNDS-EN-ULAW \
+                          menuselect.makeopts && \
+    make -j$(nproc) && make install && make samples && make config
+
+# Set working directory to Asterisk config dir
+WORKDIR /etc/asterisk
+
+# Switch to non-root user
+USER asterisk
+
+# Expose required ports
 EXPOSE 5060/udp 10000-20000/udp 8088/tcp
 
-# Start Asterisk
-CMD ["asterisk", "-f", "-vvv"]
+# Run Asterisk in foreground
+CMD ["asterisk", "-f", "-U", "asterisk", "-p"]

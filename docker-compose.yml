@@ -1,19 +1,17 @@
-version: "3.9"
+version: '3.8'
+
 services:
   asterisk:
-    build: ./asterisk
+    image: kr4ge/asterisk-ari:22.3.0
     ports:
       - "5060:5060/udp"
       - "10000-20000:10000-20000/udp"
-      - "8088:8088/tcp"
+      - "8088:8088"
     volumes:
       - ./asterisk/configs:/etc/asterisk
+
   node-app:
     build: ./node-app
-    depends_on: [asterisk]
-    environment:
-      - ARI_URL=http://asterisk:8088
-      - ARI_USER=asterisk
-      - ARI_PASS=asterisk
-      - APP_NAME=hello-app
+    depends_on:
+      - asterisk
     network_mode: service:asterisk
