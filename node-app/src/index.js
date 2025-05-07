@@ -1,8 +1,16 @@
+import express from 'express';
 import Ari from 'ari-client';
 import dotenv from 'dotenv';
 
 // Load .env file
 dotenv.config();
+
+// Create a basic HTTP server for Docker healthcheck
+const app = express();
+app.get('/', (req, res) => res.send('OK'));
+app.listen(3001, () => {
+  console.log('✅ Healthcheck endpoint running on http://localhost:3001');
+});
 
 const { ARI_URL, ARI_USER, ARI_PASS, APP_NAME } = process.env;
 

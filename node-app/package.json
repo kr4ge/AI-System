@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "ari-client": "^1.0.0",
-    "dotenv": "^16.4.0"
+    "dotenv": "^16.4.0",
+    "express": "^5.1.0"
   }
 }
