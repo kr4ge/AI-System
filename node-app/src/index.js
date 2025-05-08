@@ -1,6 +1,12 @@
+// src/index.js
+
+import Ari from 'ari-client'; // ✅ Required for ARI integration
+import dotenv from 'dotenv';
 import CallHandler from './handlers/callHandler.js';
 
-const callHandler = new CallHandler();
+dotenv.config();
+
+const { ARI_URL, ARI_USER, ARI_PASS, APP_NAME } = process.env;
 
 Ari.connect(ARI_URL, ARI_USER, ARI_PASS)
   .then((ari) => {
@@ -10,14 +16,16 @@ Ari.connect(ARI_URL, ARI_USER, ARI_PASS)
       console.log(`📞 Incoming call from ${channel.name}`);
       await channel.answer();
 
+      // Play hello-world.ulaw first
       console.log('🔊 Playing hello-world...');
       const playback = ari.Playback();
-
       channel.play({ media: 'sound:hello-world' }, playback);
 
+      // When done, trigger AI agent
       playback.once('PlaybackFinished', async () => {
         console.log('✅ hello-world finished, starting AI agent...');
-        await callHandler.handleCall(channel);
+        const handler = new CallHandler(ari);
+        await handler.handleCall(channel);
       });
     });
 
