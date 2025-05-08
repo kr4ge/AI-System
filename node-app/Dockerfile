@@ -1,17 +1,18 @@
-# Use a lightweight Node.js base image
-FROM node:20.12.2-alpine
+FROM node:20-alpine
 
-# Set working directory
-WORKDIR /usr/src/app
+# Install dependencies including ffmpeg
+RUN apk add --no-cache ffmpeg
 
-# Copy package.json and package-lock.json first for caching
+WORKDIR /app
+
 COPY package*.json ./
+RUN npm install
 
-# Install dependencies
-RUN npm ci --omit=dev
-
-# Copy the rest of the app
 COPY . .
 
-# Run the app
+# Ensure tmp directory exists with proper permissions
+RUN mkdir -p /app/tmp && chmod -R 777 /app/tmp
+
+EXPOSE 3001
+
 CMD ["npm", "start"]

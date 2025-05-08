@@ -25,13 +25,13 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    # - name: 🐳 Build and push asterisk Docker images
-    #   uses: docker/build-push-action@v3
-    #   with:
-    #     context: ./asterisk
-    #     file: ./asterisk/Dockerfile
-    #     push: true
-    #     tags: ${{ env.DOCKERHUB_REPO }}-asterisk:latest
+    - name: 🐳 Build and push asterisk Docker images
+      uses: docker/build-push-action@v3
+      with:
+        context: ./asterisk
+        file: ./asterisk/Dockerfile
+        push: true
+        tags: ${{ env.DOCKERHUB_REPO }}-asterisk:latest
 
     - name: 🐳 Build and push Node.js Docker image
       uses: docker/build-push-action@v3
@@ -74,6 +74,7 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           cd ~/ai-system
+          docker pull ${{ env.DOCKERHUB_REPO }}-asterisk:latest
           docker pull ${{ env.DOCKERHUB_REPO }}-node:latest
           docker-compose down
           docker-compose up -d --remove-orphans

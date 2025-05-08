@@ -11,6 +11,8 @@ services:
       - "8088:8088"
     networks:
       - ainw
+    volumes:
+      - tts_shared:/var/lib/asterisk/sounds/ai
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8088/httpstatus"]
@@ -29,12 +31,17 @@ services:
       - asterisk
     networks:
       - ainw
+    volumes:
+      - tts_shared:/app/tmp
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+volumes:
+  tts_shared:
 
 networks:
   ainw:

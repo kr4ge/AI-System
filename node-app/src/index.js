@@ -1,5 +1,6 @@
 import Ari from 'ari-client';
 import dotenv from 'dotenv';
+import { handleCall } from './handlers/callHandler.js';
 
 dotenv.config();
 
@@ -11,24 +12,19 @@ Ari.connect(ARI_URL, ARI_USER, ARI_PASS)
 
     ari.on('StasisStart', async (event, channel) => {
       console.log(`📞 Incoming call from ${channel.name}`);
+      await channel.answer();
 
-      try {
-        await channel.answer();
-        console.log('🔊 Playing hello-world...');
+      // Play hello-world.ulaw first
+      console.log('🔊 Playing hello-world...');
+      const playback = ari.Playback();
 
-        const playback = ari.Playback();
+      channel.play({ media: 'sound:hello-world' }, playback);
 
-        // Attach listener before playback starts
-        playback.on('PlaybackFinished', async () => {
-          console.log('📴 Playback finished. Hanging up...');
-          await channel.hangup();
-        });
-
-        await channel.play({ media: 'sound:hello-world' }, playback);
-
-      } catch (err) {
-        console.error('❌ Error handling call:', err);
-      }
+      // When done, trigger AI agent
+      playback.once('PlaybackFinished', async () => {
+        console.log('✅ hello-world finished, starting AI agent...');
+        await handleCall(channel, ari);
+      });
     });
 
     ari.start(APP_NAME);
