@@ -1,63 +1,58 @@
-import WebSocket from 'ws';
-import { Deepgram } from '@deepgram/sdk';
-import EventEmitter from 'events';
-import { Readable } from 'stream';
+import { createClient } from '@deepgram/sdk';
 import dotenv from 'dotenv';
-
 dotenv.config();
 
-const deepgram = new Deepgram(process.env.DEEPGRAM_API_KEY);
-
-class DeepgramClient extends EventEmitter {
+export default class DeepgramClient {
   constructor() {
-    super();
-    this.socket = null;
+    this.deepgram = createClient(process.env.DEEPGRAM_API_KEY);
   }
 
-  async startStreaming() {
-    const options = {
-      punctuate: true,
-      language: 'en',
-      interim_results: false,
-      vad_events: true,
-      encoding: 'linear16',
-      sample_rate: 8000,
-    };
+  async listenAndTranscribe(channel) {
+    console.log('🎙️ [Deepgram] Starting STT stream...');
 
-    this.socket = deepgram.transcription.live(options);
+    // Open Asterisk audio stream
+    const ws = await channel.record({
+      format: 'wav',
+      beep: false,
+      ifExists: 'overwrite',
+      name: `stt_input_${Date.now()}`
+    });
 
-    this.socket.on('open', () => this.emit('open'));
+    // Stream to Deepgram
+    const dgStream = await this.deepgram.listen.live({
+      model: 'nova',
+      smart_format: true,
+      vad_events: true
+    });
 
-    this.socket.on('transcriptReceived', (data) => {
-      const transcript = data.channel?.alternatives?.[0]?.transcript;
+    dgStream.on('transcriptReceived', (data) => {
+      const transcript = data.channel.alternatives[0]?.transcript;
       if (transcript) {
-        this.emit('transcript', transcript);
+        console.log('📜 [Deepgram] Transcript:', transcript);
       }
     });
 
-    this.socket.on('vadDetected', (data) => {
-      this.emit('vad', data);
+    dgStream.on('error', (err) => {
+      console.error('❌ [Deepgram] Error:', err);
     });
 
-    this.socket.on('error', (err) => {
-      console.error('Deepgram error:', err);
-      this.emit('error', err);
+    dgStream.on('close', () => {
+      console.log('🛑 [Deepgram] Stream closed');
     });
 
-    this.socket.on('close', () => this.emit('close'));
-  }
+    // Simulate streaming audio from Asterisk to Deepgram
+    ws.on('data', (chunk) => {
+      dgStream.send(chunk);
+    });
 
-  send(audioBuffer) {
-    if (this.socket && this.socket.send) {
-      this.socket.send(audioBuffer);
-    }
-  }
-
-  finish() {
-    if (this.socket) {
-      this.socket.finish();
-    }
+    return new Promise((resolve) => {
+      dgStream.on('transcriptReceived', (data) => {
+        const transcript = data.channel.alternatives[0]?.transcript;
+        if (transcript && data.is_final) {
+          resolve(transcript);
+          dgStream.finish(); // Close stream after final result
+        }
+      });
+    });
   }
 }
-
-export default DeepgramClient;
