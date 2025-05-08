@@ -7,6 +7,7 @@ import CallHandler from './handlers/callHandler.js';
 dotenv.config();
 
 const { ARI_URL, ARI_USER, ARI_PASS, APP_NAME } = process.env;
+const handler = new CallHandler();
 
 Ari.connect(ARI_URL, ARI_USER, ARI_PASS)
   .then((ari) => {
@@ -24,10 +25,8 @@ Ari.connect(ARI_URL, ARI_USER, ARI_PASS)
       // When done, trigger AI agent
       playback.once('PlaybackFinished', async () => {
         console.log('✅ hello-world finished, starting AI agent...');
-        const handler = new CallHandler(ari);
-        await handler.handleCall(channel);
+        await handler.handleCall(channel, ari);
       });
-    });
 
     ari.start(APP_NAME);
     console.log(`🚀 ARI app "${APP_NAME}" is now running...`);

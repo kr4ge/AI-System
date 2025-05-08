@@ -17,17 +17,8 @@ class CallHandler {
     this.tts = new OpenAITTS();
   }
 
-  async handleCall(channel) {
+  async handleCall(channel, ari) {
     try {
-      await channel.answer();
-      console.log('🔊 Playing hello-world...');
-      const helloPlayback = await channel.play({ media: 'sound:hello-world' });
-
-      // Wait for hello-world to finish
-      await new Promise((resolve) => {
-        channel.once('PlaybackFinished', resolve);
-      });
-
       console.log('🧠 Starting AI session...');
       await this.runConversationLoop(channel);
     } catch (err) {
@@ -46,7 +37,7 @@ class CallHandler {
       }
 
       console.log(`📜 User said: "${transcript}"`);
-      const response = await this.agent.getReply(transcript);
+      const response = await this.agent.replyToUser(transcript);
       console.log(`🤖 AI replies: "${response}"`);
 
       const wavBuffer = await this.tts.synthesizeToWav(response);
