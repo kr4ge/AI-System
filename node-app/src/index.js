@@ -27,6 +27,7 @@ Ari.connect(ARI_URL, ARI_USER, ARI_PASS)
         console.log('✅ hello-world finished, starting AI agent...');
         await handler.handleCall(channel, ari);
       });
+    });
 
     ari.start(APP_NAME);
     console.log(`🚀 ARI app "${APP_NAME}" is now running...`);
